@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# 應用程式相關
+data/test_*.json
+data/*.backup_*
+
+# IDE 和編輯器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS 系統檔案
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# 打包相關
+*.exe
+*.msi
+*.dmg
+*.pkg
+
+# 測試和臨時檔案
+*.test
+*.bak
+*.orig
+temp/
+tmp/
+
+# 版本控制和部署
+.env
+.env.local
+config.ini
+secrets.json 
