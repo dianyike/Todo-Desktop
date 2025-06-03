@@ -1,6 +1,6 @@
 # 📋 桌面代辦清單應用（ToDo List Desktop App）
 
-![主畫面展示](images/screenshot-main.png)
+![主畫面展示](./images/homepage.jpg)
 
 一款使用 Python + Tkinter 打造的跨平台桌面代辦清單工具，提供任務新增、分類、標記完成、刪除與提醒功能，支援本地儲存與自動載入，介面簡單直覺，適合日常任務管理。
 
@@ -10,7 +10,8 @@
 
 ### 📋 任務清單操作
 
-![任務清單操作圖](images/screenshot-list.png)
+![設定提醒展示](./images/set-reminder.jpg)
+![提醒訊息展示](./images/reminder-message.jpg)
 
 - ✅ **新增任務**：透過輸入框輸入任務內容並加入清單
 - 📋 **任務清單**：即時顯示所有任務，可滾動檢視
