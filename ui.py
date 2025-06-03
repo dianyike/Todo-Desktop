@@ -39,7 +39,7 @@ class TodoApp:
     
     def _setup_ui(self):
         """設定用戶介面"""
-        self.root.title("📋 桌面代辦清單")
+        self.root.title("桌面代辦清單")
         self.root.geometry("600x500")
         self.root.resizable(True, True)
         
@@ -54,7 +54,7 @@ class TodoApp:
         main_frame.rowconfigure(2, weight=1)
         
         # 標題
-        title_label = ttk.Label(main_frame, text="📋 桌面代辦清單", font=("Arial", 16, "bold"))
+        title_label = ttk.Label(main_frame, text="桌面代辦清單", font=("Arial", 16, "bold"))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 10))
         
         # 新增任務區域
@@ -257,14 +257,21 @@ class TodoApp:
         dialog = ReminderDialog(self.root, task)
         result = dialog.result
         
-        if result:
-            task.set_reminder(result)
-            self.task_manager.save_tasks()
-            self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
-            self._refresh_task_list()
-            
-            time_str = result.strftime("%Y-%m-%d %H:%M")
-            self._update_status(f"已為任務 '{task.title}' 設定提醒時間: {time_str}")
+        if result is not None:  # 明確檢查是否為None，因為清除提醒會返回None
+            if result:  # 如果有設定時間
+                task.set_reminder(result)
+                self.task_manager.save_tasks()
+                self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
+                self._refresh_task_list()
+                
+                time_str = result.strftime("%Y-%m-%d %H:%M")
+                self._update_status(f"已為任務 '{task.title}' 設定提醒時間: {time_str}")
+            else:  # 清除提醒
+                task.remind_at = None  # 清除任務的提醒時間
+                self.task_manager.save_tasks()
+                self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
+                self._refresh_task_list()
+                self._update_status(f"已清除任務 '{task.title}' 的提醒")
     
     def _clear_completed_tasks(self):
         """清理已完成的任務"""
@@ -345,9 +352,60 @@ class TodoApp:
     
     def _on_reminder_triggered(self, reminder: dict):
         """提醒觸發回調"""
-        # 這裡可以自定義提醒行為
-        # 目前使用預設的彈窗通知
-        pass
+        # 使用預設的彈窗通知
+        try:
+            # 創建通知視窗
+            notification_window = tk.Toplevel(self.root)
+            notification_window.title("任務提醒")
+            notification_window.geometry("300x150")
+            notification_window.resizable(False, False)
+            
+            # 設定視窗置頂
+            notification_window.attributes('-topmost', True)
+            
+            # 內容標籤
+            title_label = tk.Label(
+                notification_window, 
+                text="⏰ 任務提醒",
+                font=("Arial", 14, "bold")
+            )
+            title_label.pack(pady=10)
+            
+            task_label = tk.Label(
+                notification_window,
+                text=f"任務: {reminder['task_title']}",
+                font=("Arial", 10),
+                wraplength=250
+            )
+            task_label.pack(pady=5)
+            
+            time_label = tk.Label(
+                notification_window,
+                text=f"提醒時間: {reminder['remind_at'].strftime('%Y-%m-%d %H:%M')}",
+                font=("Arial", 9)
+            )
+            time_label.pack(pady=5)
+            
+            # 確認按鈕
+            confirm_button = tk.Button(
+                notification_window,
+                text="確認",
+                command=notification_window.destroy,
+                width=10
+            )
+            confirm_button.pack(pady=10)
+            
+            # 居中顯示
+            notification_window.update_idletasks()
+            x = (notification_window.winfo_screenwidth() - notification_window.winfo_width()) // 2
+            y = (notification_window.winfo_screenheight() - notification_window.winfo_height()) // 2
+            notification_window.geometry(f"+{x}+{y}")
+            
+            # 5秒後自動關閉
+            notification_window.after(5000, notification_window.destroy)
+            
+        except Exception as e:
+            print(f"顯示通知視窗錯誤: {e}")
     
     def _update_status(self, message: str):
         """更新狀態列"""
@@ -398,7 +456,7 @@ class ReminderDialog:
         # 創建對話框視窗
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"設定提醒 - {task.title}")
-        self.dialog.geometry("350x250")
+        self.dialog.geometry("400x300")  # 增加寬度和高度以適應兩行三欄佈局
         self.dialog.resizable(False, False)
         self.dialog.transient(parent)
         self.dialog.grab_set()
@@ -422,15 +480,22 @@ class ReminderDialog:
         # 快速選項
         ttk.Label(main_frame, text="快速選項:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 5))
         
-        quick_frame = ttk.Frame(main_frame)
-        quick_frame.pack(fill=tk.X, pady=(0, 10))
+        # 快速選項容器，使用Grid佈局實現兩行三欄
+        quick_container = ttk.Frame(main_frame)
+        quick_container.pack(fill=tk.X, pady=(0, 10))
         
-        # 快速提醒按鈕
+        # 配置網格權重，讓按鈕平均分佈
+        for i in range(3):
+            quick_container.columnconfigure(i, weight=1)
+        
+        # 快速提醒按鈕，兩行三欄佈局
         quick_options = ReminderHelper.get_quick_reminder_options()
-        for i, option in enumerate(quick_options[:4]):  # 只顯示前4個選項
-            btn = ttk.Button(quick_frame, text=option["label"], 
+        for i, option in enumerate(quick_options[:6]):  # 顯示前6個選項
+            row = i // 3
+            col = i % 3
+            btn = ttk.Button(quick_container, text=option["label"], 
                            command=lambda opt=option: self._select_quick_option(opt))
-            btn.pack(side=tk.LEFT, padx=(0, 5))
+            btn.grid(row=row, column=col, sticky=(tk.W, tk.E), padx=2, pady=2)
         
         # 分隔線
         ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
@@ -453,13 +518,16 @@ class ReminderDialog:
         self.time_entry.grid(row=0, column=3)
         self.time_entry.insert(0, "09:00")
         
-        # 按鈕區域
+        # 按鈕區域 - 交換確認和取消按鈕位置
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X, pady=(10, 0))
         
-        ttk.Button(button_frame, text="確認", command=self._confirm).pack(side=tk.RIGHT, padx=(5, 0))
-        ttk.Button(button_frame, text="取消", command=self._cancel).pack(side=tk.RIGHT)
+        # 左側：清除提醒按鈕
         ttk.Button(button_frame, text="清除提醒", command=self._clear_reminder).pack(side=tk.LEFT)
+        
+        # 右側：取消和確認按鈕（交換順序）
+        ttk.Button(button_frame, text="取消", command=self._cancel).pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Button(button_frame, text="確認", command=self._confirm).pack(side=tk.RIGHT)
     
     def _select_quick_option(self, option):
         """選擇快速選項"""
@@ -484,7 +552,7 @@ class ReminderDialog:
     
     def _clear_reminder(self):
         """清除提醒"""
-        self.result = None
+        self.result = False  # 設為False表示清除提醒
         self.dialog.destroy()
 
 

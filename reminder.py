@@ -301,5 +301,4 @@ class ReminderHelper:
         # 過濾掉已過去的時間
         valid_options = [opt for opt in options if opt["datetime"] > now]
         return valid_options
-
-
+    

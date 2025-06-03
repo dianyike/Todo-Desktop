@@ -128,7 +128,7 @@ Todo-Desktop 桌面代辦清單應用程式
 - Windows 10/11
 - 支援圖形介面
 
-如有問題請聯絡：[您的聯絡方式]
+如有問題請聯絡：dianyike1013@gmail.com
 ```
 
 ### 6. **效能最佳化建議**
@@ -232,4 +232,4 @@ pyinstaller --onefile --version-file=version.txt main.py
 ---
 
 _最後更新：2025-06-03_  
-_適用版本：Todo-Desktop v1.0.0_
+_適用版本：Todo-Desktop v1.1.0_

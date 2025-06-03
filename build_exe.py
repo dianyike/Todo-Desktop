@@ -161,14 +161,7 @@ class TodoAppBuilder:
         if exe_path.exists():
             print(f"✅ 可執行檔位置: {exe_path.absolute()}")
             print("✅ 您可以直接運行此檔案")
-            print("✅ 此檔案可以分發給其他 Windows 用戶使用")
-            
-            # 顯示發佈建議
-            print("\n📋 發佈建議:")
-            print("   1. 測試可執行檔是否正常運行")
-            print("   2. 檢查所有功能是否完整")
-            print("   3. 準備使用說明文件")
-            print("   4. 考慮數位簽章 (可選)")
+            print("如果有任何問題，請寄信至開發者或查看 GitHub 問題頁面")
         else:
             print("❌ 打包失敗，請檢查錯誤訊息")
     

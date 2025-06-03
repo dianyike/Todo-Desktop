@@ -1,4 +1,4 @@
-# Python
+# ===== Python 相關 =====
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,37 +9,136 @@ dist/
 build/
 *.spec
 
-# 應用程式相關
+# ===== 應用程式相關 =====
+# 用戶任務數據（保護隱私）
+data/tasks.json
+data/tasks_*.json
+
+# 測試和備份文件
 data/test_*.json
 data/*.backup_*
+data/*.bak
+*.backup_*
 
-# IDE 和編輯器
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS 系統檔案
-.DS_Store
-Thumbs.db
-*.tmp
+# 應用程式日誌
 *.log
+logs/
 
-# 打包相關
+# ===== 開發和打包相關 =====
+# PyInstaller 打包檔案
 *.exe
 *.msi
 *.dmg
 *.pkg
+*.app/
 
-# 測試和臨時檔案
+# 開發臨時檔案
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ===== IDE 和編輯器 =====
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===== 作業系統相關 =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ===== 臨時和測試檔案 =====
+*.tmp
+*.temp
 *.test
 *.bak
 *.orig
 temp/
 tmp/
+test_data/
 
-# 版本控制和部署
+# ===== 版本控制和部署 =====
+# 環境變數和配置
 .env
 .env.local
+.env.production
 config.ini
-secrets.json 
+secrets.json
+settings.local.json
+
+# Git 相關
+*.patch
+*.diff
+
+# ===== 文檔和媒體 =====
+# 文檔草稿
+*.draft
+NOTES.md
+TODO.personal.md
+
+# 媒體檔案（如果不需要版本控制）
+*.mp4
+*.avi
+*.mov
+*.wmv
+
+# ===== 專案特定 =====
+# Cursor 編輯器
+.cursor/
+*.cursorignore 
+*.cursorrules
+
+# 用戶自定義配置
+user_config.json
+personal_settings.json
+
+# 性能分析
+*.prof
+*.stats
+
+# 覆蓋率報告
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml 

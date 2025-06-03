@@ -10,8 +10,8 @@
 - 本地JSON儲存
 - 簡潔直覺的GUI介面
 
-作者: AI Assistant
-版本: 1.0.0
+作者: Dianyike + Cursor
+版本: 1.1.0
 """
 
 import sys
