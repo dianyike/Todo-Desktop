@@ -76,7 +76,7 @@ class Task:
         return f"Task(id='{self.id}', title='{self.title}', category='{self.category}', completed={self.completed})"
 
 
-class TaskCategories:
+class TaskCategories: #如果要自己定義任務分類，可以使用這個類別
     """任務分類常數"""
     GENERAL = "一般"
     WORK = "工作"
@@ -84,9 +84,9 @@ class TaskCategories:
     STUDY = "學習"
     HEALTH = "健康"
     
-    @classmethod
+    @classmethod 
     def get_all_categories(cls) -> list:
         """取得所有分類清單"""
-        return [cls.GENERAL, cls.WORK, cls.LIFE, cls.STUDY, cls.HEALTH]
+        return [cls.GENERAL, cls.WORK, cls.LIFE, cls.STUDY, cls.HEALTH] #這裡記得把自定義任務分類給加上去
 
 

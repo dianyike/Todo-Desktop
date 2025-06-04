@@ -18,7 +18,7 @@ class ReminderManager:
         self.reminders: List[dict] = []
         self.is_running = False
         self.check_thread: Optional[threading.Thread] = None
-        self.check_interval = 30  # 每30秒檢查一次
+        self.check_interval = 1  # 改為每1秒檢查一次，確保精準提醒
         self.notification_callback: Optional[Callable] = None
     
     def set_notification_callback(self, callback: Callable):
@@ -99,10 +99,22 @@ class ReminderManager:
                 current_time = datetime.now()
                 
                 for reminder in self.reminders:
-                    if not reminder["notified"] and current_time >= reminder["remind_at"]:
-                        # 觸發提醒
-                        self._trigger_notification(reminder)
-                        reminder["notified"] = True
+                    if not reminder["notified"]:
+                        remind_time = reminder["remind_at"]
+                        
+                        # 精準到秒的時間比較
+                        # 檢查是否到達提醒時間（精確到秒）
+                        if (current_time.year == remind_time.year and
+                            current_time.month == remind_time.month and
+                            current_time.day == remind_time.day and
+                            current_time.hour == remind_time.hour and
+                            current_time.minute == remind_time.minute and
+                            current_time.second >= remind_time.second):
+                            
+                            # 觸發提醒
+                            self._trigger_notification(reminder)
+                            reminder["notified"] = True
+                            print(f"精準提醒觸發: {reminder['task_title']} - {remind_time.strftime('%H:%M:%S')}")
                 
                 # 清理已過期且已通知的提醒
                 self.reminders = [r for r in self.reminders 
@@ -143,7 +155,7 @@ class ReminderManager:
             # 創建通知視窗
             notification_window = tk.Toplevel()
             notification_window.title("任務提醒")
-            notification_window.geometry("300x150")
+            notification_window.geometry("300x200")
             notification_window.resizable(False, False)
             
             # 設定視窗置頂
@@ -153,14 +165,14 @@ class ReminderManager:
             title_label = tk.Label(
                 notification_window, 
                 text="任務提醒",
-                font=("Arial", 14, "bold")
+                font=("Microsoft JhengHei", 14, "bold")
             )
             title_label.pack(pady=10)
             
             task_label = tk.Label(
                 notification_window,
                 text=f"任務: {reminder['task_title']}",
-                font=("Arial", 10),
+                font=("Microsoft JhengHei", 12),
                 wraplength=250
             )
             task_label.pack(pady=5)
@@ -168,7 +180,7 @@ class ReminderManager:
             time_label = tk.Label(
                 notification_window,
                 text=f"提醒時間: {reminder['remind_at'].strftime('%H:%M')}",
-                font=("Arial", 9)
+                font=("Microsoft JhengHei", 12)
             )
             time_label.pack(pady=5)
             
@@ -177,9 +189,9 @@ class ReminderManager:
                 notification_window,
                 text="確認",
                 command=notification_window.destroy,
-                width=10
+                width=20
             )
-            confirm_button.pack(pady=10)
+            confirm_button.pack(pady=15)
             
             # 居中顯示
             notification_window.update_idletasks()
@@ -187,8 +199,8 @@ class ReminderManager:
             y = (notification_window.winfo_screenheight() - notification_window.winfo_height()) // 2
             notification_window.geometry(f"+{x}+{y}")
             
-            # 5秒後自動關閉
-            notification_window.after(5000, notification_window.destroy)
+            # 10秒後自動關閉
+            notification_window.after(10000, notification_window.destroy)
             
         except Exception as e:
             print(f"顯示通知視窗錯誤: {e}")
@@ -243,41 +255,59 @@ class ReminderHelper:
     @staticmethod
     def parse_reminder_time(time_str: str, date_str: str = None) -> Optional[datetime]:
         """
-        解析提醒時間字串
+        解析提醒時間字串並轉換為datetime物件
         
         Args:
-            time_str (str): 時間字串，格式如 "14:30" 或 "2:30 PM"
-            date_str (str): 日期字串，格式如 "2025-06-03"，為空則使用今天
+            time_str (str): 時間字串，如 "14:30" 或 "2:30 PM"
+            date_str (str, optional): 日期字串，如 "2024-12-25"，預設為今天
             
         Returns:
-            Optional[datetime]: 解析後的時間，解析失敗返回None
+            Optional[datetime]: 解析成功返回datetime物件，失敗返回None
         """
         try:
+            # 處理日期部分
             if date_str:
-                date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+                target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
             else:
-                date_obj = datetime.now().date()
+                target_date = datetime.now().date()
             
-            # 嘗試解析不同時間格式
-            time_formats = ["%H:%M", "%I:%M %p", "%H:%M:%S"]
+            # 處理時間部分
+            time_str = time_str.strip()
             
-            for fmt in time_formats:
+            # 嘗試不同的時間格式
+            time_formats = [
+                "%H:%M",      # 24小時制，如 "14:30"
+                "%I:%M %p",   # 12小時制，如 "2:30 PM"
+                "%I:%M%p",    # 12小時制無空格，如 "2:30PM"
+                "%H:%M:%S",   # 24小時制含秒，如 "14:30:00"
+            ]
+            
+            parsed_time = None
+            for time_format in time_formats:
                 try:
-                    time_obj = datetime.strptime(time_str.strip(), fmt).time()
-                    remind_datetime = datetime.combine(date_obj, time_obj)
-                    
-                    # 如果時間已過，設定為明天
-                    if remind_datetime <= datetime.now():
-                        remind_datetime += timedelta(days=1)
-                    
-                    return remind_datetime
+                    parsed_time = datetime.strptime(time_str, time_format).time()
+                    break
                 except ValueError:
                     continue
             
-            return None
+            if parsed_time is None:
+                return None
+            
+            # 將時間設定為精確的00秒
+            parsed_time = parsed_time.replace(second=0, microsecond=0)
+            
+            # 結合日期和時間
+            target_datetime = datetime.combine(target_date, parsed_time)
+            
+            # 如果設定的時間已經過了（針對今天的情況），則設定為明天
+            current_time = datetime.now()
+            if target_datetime <= current_time and date_str is None:
+                target_datetime = target_datetime + timedelta(days=1)
+            
+            return target_datetime
             
         except Exception as e:
-            print(f"解析提醒時間錯誤: {e}")
+            print(f"時間解析錯誤: {e}")
             return None
     
     @staticmethod

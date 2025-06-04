@@ -27,10 +27,18 @@ class TodoApp:
         self.task_listbox = None
         self.category_combobox = None
         self.task_entry = None
+        self.search_entry = None
         self.status_label = None
+        self.dark_mode_var = tk.BooleanVar()
+        self.style = ttk.Style()
+        
+        # 任務搜尋相關
+        self.original_tasks = []
+        self.filtered_tasks = []
         
         # 初始化UI
         self._setup_ui()
+        self._setup_themes()
         self._load_tasks()
         
         # 啟動提醒監控
@@ -39,8 +47,8 @@ class TodoApp:
     
     def _setup_ui(self):
         """設定用戶介面"""
-        self.root.title("桌面代辦清單")
-        self.root.geometry("600x500")
+        self.root.title("桌面代辦清單 v1.2.0")
+        self.root.geometry("650x600")
         self.root.resizable(True, True)
         
         # 設定主框架
@@ -51,11 +59,13 @@ class TodoApp:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(2, weight=1)
+        main_frame.rowconfigure(3, weight=1)
         
-        # 標題
-        title_label = ttk.Label(main_frame, text="桌面代辦清單", font=("Arial", 16, "bold"))
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 10))
+        # 頂部區域：標題和深色模式切換
+        self._create_header_section(main_frame)
+        
+        # 搜尋區域
+        self._create_search_section(main_frame)
         
         # 新增任務區域
         self._create_add_task_section(main_frame)
@@ -69,16 +79,59 @@ class TodoApp:
         # 狀態列
         self._create_status_section(main_frame)
     
+    def _create_header_section(self, parent):
+        """創建頂部標題和深色模式區域"""
+        header_frame = ttk.Frame(parent)
+        header_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        header_frame.columnconfigure(0, weight=1)
+        
+        # 標題
+        title_label = ttk.Label(header_frame, text="桌面代辦清單", font=("Microsoft JhengHei", 18, "bold"))
+        title_label.grid(row=0, column=0, sticky=tk.W)
+        
+        # 深色模式切換區域
+        dark_mode_frame = ttk.Frame(header_frame)
+        dark_mode_frame.grid(row=0, column=1, sticky=tk.E)
+        
+        # 深色模式標籤
+        self.dark_mode_label = ttk.Label(dark_mode_frame, text="深色模式:", font=("Microsoft JhengHei", 10))
+        self.dark_mode_label.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # 深色模式切換按鈕
+        self.dark_mode_button = ttk.Checkbutton(
+            dark_mode_frame, 
+            text="🌙", 
+            variable=self.dark_mode_var,
+            command=self._toggle_dark_mode
+        )
+        self.dark_mode_button.pack(side=tk.LEFT)
+    
+    def _create_search_section(self, parent):
+        """創建搜尋區域"""
+        search_frame = ttk.LabelFrame(parent, text="搜尋任務", padding="5")
+        search_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        search_frame.columnconfigure(1, weight=1)
+        
+        # 搜尋標籤和輸入框
+        ttk.Label(search_frame, text="搜尋:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
+        self.search_entry = ttk.Entry(search_frame, font=("Microsoft JhengHei", 12))
+        self.search_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 5))
+        self.search_entry.bind('<KeyRelease>', self._on_search_changed)
+        
+        # 清除搜尋按鈕
+        clear_search_button = ttk.Button(search_frame, text="清除", command=self._clear_search)
+        clear_search_button.grid(row=0, column=2, padx=(5, 0))
+    
     def _create_add_task_section(self, parent):
         """創建新增任務區域"""
         # 新增任務框架
         add_frame = ttk.LabelFrame(parent, text="新增任務", padding="5")
-        add_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        add_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         add_frame.columnconfigure(1, weight=1)
         
         # 任務輸入
         ttk.Label(add_frame, text="任務:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
-        self.task_entry = ttk.Entry(add_frame, font=("Arial", 10))
+        self.task_entry = ttk.Entry(add_frame, font=("Microsoft JhengHei", 12))
         self.task_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 5))
         self.task_entry.bind('<Return>', lambda e: self._add_task())
         
@@ -97,7 +150,7 @@ class TodoApp:
         """創建任務清單區域"""
         # 任務清單框架
         list_frame = ttk.LabelFrame(parent, text="任務清單", padding="5")
-        list_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        list_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
         
@@ -107,7 +160,7 @@ class TodoApp:
         list_container.columnconfigure(0, weight=1)
         list_container.rowconfigure(0, weight=1)
         
-        self.task_listbox = tk.Listbox(list_container, font=("Arial", 10), 
+        self.task_listbox = tk.Listbox(list_container, font=("Microsoft JhengHei", 12), 
                                      selectmode=tk.EXTENDED, height=15)
         self.task_listbox.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
@@ -123,7 +176,7 @@ class TodoApp:
     def _create_button_section(self, parent):
         """創建按鈕區域"""
         button_frame = ttk.Frame(parent)
-        button_frame.grid(row=3, column=0, columnspan=3, pady=(0, 10))
+        button_frame.grid(row=4, column=0, columnspan=3, pady=(0, 10))
         
         # 任務操作按鈕
         ttk.Button(button_frame, text="✓ 標記完成", command=self._toggle_task_completion).pack(side=tk.LEFT, padx=(0, 5))
@@ -141,7 +194,7 @@ class TodoApp:
     def _create_status_section(self, parent):
         """創建狀態列"""
         status_frame = ttk.Frame(parent)
-        status_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E))
+        status_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E))
         status_frame.columnconfigure(0, weight=1)
         
         self.status_label = ttk.Label(status_frame, text="就緒", relief=tk.SUNKEN, anchor=tk.W)
@@ -154,6 +207,157 @@ class TodoApp:
         # 更新時間
         self._update_time()
     
+    def _setup_themes(self):
+        """設定主題樣式"""
+        # 設定預設主題
+        self.style.theme_use('default')
+    
+    def _toggle_dark_mode(self):
+        """切換深色模式"""
+        if self.dark_mode_var.get():
+            # 切換到深色模式
+            self._apply_dark_theme()
+            self.dark_mode_button.configure(text="☀️")  # 在深色模式下顯示太陽圖示
+            self.dark_mode_label.configure(text="淺色模式:")
+            self._update_status("已切換至深色模式")
+        else:
+            # 切換到淺色模式
+            self._apply_light_theme()
+            self.dark_mode_button.configure(text="🌙")  # 在淺色模式下顯示月亮圖示
+            self.dark_mode_label.configure(text="深色模式:")
+            self._update_status("已切換至淺色模式")
+    
+    def _apply_dark_theme(self):
+        """應用深色主題"""
+        # 設定主視窗背景
+        self.root.configure(bg='#2b2b2b')
+        
+        # 設定ttk樣式
+        self.style.configure('TFrame', background='#2b2b2b')
+        self.style.configure('TLabel', background='#2b2b2b', foreground='white')
+        self.style.configure('TLabelFrame', background='#2b2b2b', foreground='white')
+        self.style.configure('TLabelFrame.Label', background='#2b2b2b', foreground='white')
+        self.style.configure('TButton', background='#404040', foreground='white')
+        self.style.map('TButton', 
+                      background=[('active', '#505050'), ('pressed', '#303030')])
+        
+        # 專門配置Entry的深色模式
+        self.style.configure('TEntry', 
+                           background='#404040', 
+                           foreground='white', 
+                           fieldbackground='#404040',
+                           bordercolor='#606060',
+                           lightcolor='#606060',
+                           darkcolor='#606060',
+                           insertcolor='white')
+        self.style.map('TEntry',
+                      fieldbackground=[('focus', '#505050')],
+                      bordercolor=[('focus', '#707070')])
+        
+        # 專門配置Combobox的深色模式
+        self.style.configure('TCombobox', 
+                           background='#404040', 
+                           foreground='white', 
+                           fieldbackground='#404040',
+                           bordercolor='#606060',
+                           arrowcolor='white',
+                           insertcolor='white')
+        self.style.map('TCombobox',
+                      fieldbackground=[('readonly', '#404040'), ('focus', '#505050')],
+                      bordercolor=[('focus', '#707070')])
+        
+        self.style.configure('TCheckbutton', background='#2b2b2b', foreground='white')
+        self.style.map('TCheckbutton',
+                      background=[('active', '#404040')])
+        
+        # 設定Listbox樣式
+        self.task_listbox.configure(bg='#404040', fg='white', selectbackground='#606060', selectforeground='white')
+        
+        # 強制更新所有Entry和Combobox的樣式
+        self.task_entry.configure(style='TEntry')
+        self.search_entry.configure(style='TEntry')
+        self.category_combobox.configure(style='TCombobox')
+    
+    def _apply_light_theme(self):
+        """應用淺色主題"""
+        # 重設主視窗背景
+        self.root.configure(bg='SystemButtonFace')
+        
+        # 重設ttk樣式為系統預設
+        self.style.configure('TFrame', background='SystemButtonFace')
+        self.style.configure('TLabel', background='SystemButtonFace', foreground='SystemWindowText')
+        self.style.configure('TLabelFrame', background='SystemButtonFace', foreground='SystemWindowText')
+        self.style.configure('TLabelFrame.Label', background='SystemButtonFace', foreground='SystemWindowText')
+        self.style.configure('TButton', background='SystemButtonFace', foreground='SystemButtonText')
+        self.style.map('TButton', 
+                      background=[('active', 'SystemHighlight'), ('pressed', 'SystemHighlight')])
+        
+        # 重設Entry樣式
+        self.style.configure('TEntry', 
+                           background='SystemWindow', 
+                           foreground='SystemWindowText', 
+                           fieldbackground='SystemWindow',
+                           bordercolor='SystemButtonShadow',
+                           lightcolor='SystemButtonHighlight',
+                           darkcolor='SystemButtonShadow',
+                           insertcolor='SystemWindowText')
+        self.style.map('TEntry',
+                      fieldbackground=[('focus', 'SystemWindow')],
+                      bordercolor=[('focus', 'SystemHighlight')])
+        
+        # 重設Combobox樣式
+        self.style.configure('TCombobox', 
+                           background='SystemWindow', 
+                           foreground='SystemWindowText', 
+                           fieldbackground='SystemWindow',
+                           bordercolor='SystemButtonShadow',
+                           arrowcolor='SystemButtonText',
+                           insertcolor='SystemWindowText')
+        self.style.map('TCombobox',
+                      fieldbackground=[('readonly', 'SystemWindow'), ('focus', 'SystemWindow')],
+                      bordercolor=[('focus', 'SystemHighlight')])
+        
+        self.style.configure('TCheckbutton', background='SystemButtonFace', foreground='SystemWindowText')
+        self.style.map('TCheckbutton',
+                      background=[('active', 'SystemHighlight')])
+        
+        # 重設Listbox樣式
+        self.task_listbox.configure(bg='SystemWindow', fg='SystemWindowText', selectbackground='SystemHighlight', selectforeground='SystemHighlightText')
+        
+        # 強制更新所有Entry和Combobox的樣式
+        self.task_entry.configure(style='TEntry')
+        self.search_entry.configure(style='TEntry')
+        self.category_combobox.configure(style='TCombobox')
+    
+    def _on_search_changed(self, event):
+        """搜尋內容變更時的處理"""
+        search_text = self.search_entry.get().strip().lower()
+        if search_text:
+            self._filter_tasks(search_text)
+        else:
+            self._show_all_tasks()
+    
+    def _filter_tasks(self, search_text):
+        """根據搜尋文字過濾任務"""
+        self.filtered_tasks = []
+        for task in self.original_tasks:
+            if search_text in task.title.lower() or search_text in task.category.lower():
+                self.filtered_tasks.append(task)
+        
+        self._refresh_task_list(use_filtered=True)
+        self._update_status(f"搜尋到 {len(self.filtered_tasks)} 個任務")
+    
+    def _show_all_tasks(self):
+        """顯示所有任務"""
+        self.filtered_tasks = []
+        self._refresh_task_list(use_filtered=False)
+        self._update_status("顯示所有任務")
+    
+    def _clear_search(self):
+        """清除搜尋"""
+        self.search_entry.delete(0, tk.END)
+        self._show_all_tasks()
+        
     def _add_task(self):
         """新增任務"""
         task_text = self.task_entry.get().strip()
@@ -173,16 +377,24 @@ class TodoApp:
     def _load_tasks(self):
         """載入任務"""
         self.task_manager.load_tasks()
+        self.original_tasks = self.task_manager.get_all_tasks()
         self._refresh_task_list()
         
-        task_count = len(self.task_manager.get_all_tasks())
+        task_count = len(self.original_tasks)
         self._update_status(f"已載入 {task_count} 個任務")
     
-    def _refresh_task_list(self):
+    def _refresh_task_list(self, use_filtered=False):
         """重新整理任務清單"""
         self.task_listbox.delete(0, tk.END)
         
-        for task in self.task_manager.get_all_tasks():
+        # 更新原始任務列表
+        if not use_filtered:
+            self.original_tasks = self.task_manager.get_all_tasks()
+        
+        # 決定要顯示的任務列表
+        display_tasks = self.filtered_tasks if use_filtered and self.filtered_tasks else self.original_tasks
+        
+        for task in display_tasks:
             # 顯示格式：狀態 任務標題 [分類] 提醒時間
             status_icon = "✓" if task.completed else "○"
             reminder_info = ""
@@ -201,21 +413,24 @@ class TodoApp:
         """切換任務完成狀態"""
         selected_indices = self.task_listbox.curselection()
         if not selected_indices:
-            messagebox.showwarning("警告", "請選擇要操作的任務！")
+            messagebox.showwarning("警告", "請選擇要標記的任務！")
             return
         
+        # 取得實際任務物件
+        display_tasks = self.filtered_tasks if self.filtered_tasks else self.original_tasks
+        
         for index in selected_indices:
-            task = self.task_manager.get_all_tasks()[index]
-            if task.completed:
-                task.mark_uncompleted()
-            else:
-                task.mark_completed()
+            if index < len(display_tasks):
+                task = display_tasks[index]
+                if task.completed:
+                    task.mark_uncompleted()
+                    self._update_status(f"任務已標記為未完成: {task.title}")
+                else:
+                    task.mark_completed()
+                    self._update_status(f"任務已標記為完成: {task.title}")
         
         self.task_manager.save_tasks()
-        self._refresh_task_list()
-        self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
-        
-        self._update_status(f"已更新 {len(selected_indices)} 個任務的完成狀態")
+        self._refresh_task_list(use_filtered=bool(self.filtered_tasks))
     
     def _delete_selected_tasks(self):
         """刪除選中的任務"""
@@ -225,18 +440,38 @@ class TodoApp:
             return
         
         # 確認刪除
-        if not messagebox.askyesno("確認", f"確定要刪除 {len(selected_indices)} 個任務嗎？"):
+        if not messagebox.askyesno("確認", f"確定要刪除選中的 {len(selected_indices)} 個任務嗎？"):
             return
         
-        # 倒序刪除以避免索引問題
-        tasks = self.task_manager.get_all_tasks()
-        for index in reversed(selected_indices):
-            task = tasks[index]
+        # 取得實際任務物件
+        display_tasks = self.filtered_tasks if self.filtered_tasks else self.original_tasks
+        tasks_to_delete = []
+        
+        for index in selected_indices:
+            if index < len(display_tasks):
+                tasks_to_delete.append(display_tasks[index])
+        
+        # 刪除任務
+        for task in tasks_to_delete:
             self.task_manager.remove_task(task.id)
             self.reminder_manager.remove_reminder(task.id)
         
-        self._refresh_task_list()
-        self._update_status(f"已刪除 {len(selected_indices)} 個任務")
+        self.task_manager.save_tasks()
+        
+        # 重新載入和重新整理
+        self.original_tasks = self.task_manager.get_all_tasks()
+        
+        # 如果在搜尋模式，重新過濾
+        if self.filtered_tasks:
+            search_text = self.search_entry.get().strip().lower()
+            if search_text:
+                self._filter_tasks(search_text)
+            else:
+                self._show_all_tasks()
+        else:
+            self._refresh_task_list()
+        
+        self._update_status(f"已刪除 {len(tasks_to_delete)} 個任務")
     
     def _set_reminder(self):
         """設定提醒"""
@@ -245,83 +480,128 @@ class TodoApp:
             messagebox.showwarning("警告", "請選擇要設定提醒的任務！")
             return
         
-        if len(selected_indices) > 1:
-            messagebox.showwarning("警告", "一次只能為一個任務設定提醒！")
-            return
+        # 只處理第一個選中的任務
+        index = selected_indices[0]
+        display_tasks = self.filtered_tasks if self.filtered_tasks else self.original_tasks
         
-        task = self.task_manager.get_all_tasks()[selected_indices[0]]
-        self._show_reminder_dialog(task)
+        if index < len(display_tasks):
+            task = display_tasks[index]
+            remind_time = self._show_reminder_dialog(task)
+            
+            if remind_time is not None:
+                if remind_time is False:  # 清除提醒
+                    task.remind_at = None
+                    self.reminder_manager.remove_reminder(task.id)
+                    self._update_status(f"已清除任務提醒: {task.title}")
+                else:  # 設定提醒
+                    task.set_reminder(remind_time)
+                    self.reminder_manager.add_reminder(task)
+                    self._update_status(f"已設定提醒: {task.title} - {remind_time.strftime('%m/%d %H:%M')}")
+                
+                self.task_manager.save_tasks()
+                self._refresh_task_list(use_filtered=bool(self.filtered_tasks))
     
     def _show_reminder_dialog(self, task: Task):
         """顯示提醒設定對話框"""
-        dialog = ReminderDialog(self.root, task)
-        result = dialog.result
-        
-        if result is not None:  # 明確檢查是否為None，因為清除提醒會返回None
-            if result:  # 如果有設定時間
-                task.set_reminder(result)
-                self.task_manager.save_tasks()
-                self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
-                self._refresh_task_list()
-                
-                time_str = result.strftime("%Y-%m-%d %H:%M")
-                self._update_status(f"已為任務 '{task.title}' 設定提醒時間: {time_str}")
-            else:  # 清除提醒
-                task.remind_at = None  # 清除任務的提醒時間
-                self.task_manager.save_tasks()
-                self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
-                self._refresh_task_list()
-                self._update_status(f"已清除任務 '{task.title}' 的提醒")
+        dialog = ReminderDialog(self.root, task, self.dark_mode_var.get())
+        return dialog.result
     
     def _clear_completed_tasks(self):
         """清理已完成的任務"""
-        completed_count = len(self.task_manager.get_completed_tasks())
-        if completed_count == 0:
+        completed_tasks = [task for task in self.task_manager.get_all_tasks() if task.completed]
+        
+        if not completed_tasks:
             messagebox.showinfo("資訊", "沒有已完成的任務需要清理。")
             return
         
-        if messagebox.askyesno("確認", f"確定要清理 {completed_count} 個已完成的任務嗎？"):
-            removed_count = self.task_manager.clear_completed_tasks()
-            self._refresh_task_list()
-            self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
-            self._update_status(f"已清理 {removed_count} 個已完成的任務")
+        if messagebox.askyesno("確認", f"確定要清理 {len(completed_tasks)} 個已完成的任務嗎？"):
+            for task in completed_tasks:
+                self.task_manager.remove_task(task.id)
+                self.reminder_manager.remove_reminder(task.id)
+            
+            self.task_manager.save_tasks()
+            
+            # 重新載入任務
+            self.original_tasks = self.task_manager.get_all_tasks()
+            
+            # 如果在搜尋模式，重新過濾
+            if self.filtered_tasks:
+                search_text = self.search_entry.get().strip().lower()
+                if search_text:
+                    self._filter_tasks(search_text)
+                else:
+                    self._show_all_tasks()
+            else:
+                self._refresh_task_list()
+            
+            self._update_status(f"已清理 {len(completed_tasks)} 個已完成的任務")
     
     def _show_statistics(self):
         """顯示統計資訊"""
         all_tasks = self.task_manager.get_all_tasks()
-        completed_tasks = self.task_manager.get_completed_tasks()
-        pending_tasks = self.task_manager.get_pending_tasks()
+        total_tasks = len(all_tasks)
+        completed_tasks = len([task for task in all_tasks if task.completed])
+        pending_tasks = total_tasks - completed_tasks
         
-        # 按分類統計
+        # 分類統計
         category_stats = {}
         for task in all_tasks:
-            category_stats[task.category] = category_stats.get(task.category, 0) + 1
+            if task.category not in category_stats:
+                category_stats[task.category] = {"total": 0, "completed": 0}
+            category_stats[task.category]["total"] += 1
+            if task.completed:
+                category_stats[task.category]["completed"] += 1
         
         # 提醒統計
-        reminder_status = self.reminder_manager.get_reminder_status()
+        upcoming_reminders = self.reminder_manager.get_upcoming_reminders(24)
         
-        stats_text = f"""📊 任務統計資訊
-
-總任務數: {len(all_tasks)}
-已完成: {len(completed_tasks)}
-待完成: {len(pending_tasks)}
-完成率: {len(completed_tasks)/len(all_tasks)*100:.1f}% (如果有任務)
-
-📂 分類統計:
-{chr(10).join([f"  {cat}: {count}" for cat, count in category_stats.items()])}
-
-⏰ 提醒狀態:
-  監控運行: {'是' if reminder_status['is_running'] else '否'}
-  活動提醒: {reminder_status['active_reminders']}
-  逾期提醒: {reminder_status['overdue_reminders']}
-"""
+        # 建立統計視窗
+        stats_window = tk.Toplevel(self.root)
+        stats_window.title("統計資訊")
+        stats_window.geometry("400x350")
+        stats_window.resizable(False, False)
+        stats_window.transient(self.root)
+        stats_window.grab_set()
         
-        messagebox.showinfo("統計資訊", stats_text)
+        # 整體統計
+        overall_frame = ttk.LabelFrame(stats_window, text="整體統計", padding="10")
+        overall_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(overall_frame, text=f"總任務數: {total_tasks}").pack(anchor=tk.W)
+        ttk.Label(overall_frame, text=f"已完成: {completed_tasks}").pack(anchor=tk.W)
+        ttk.Label(overall_frame, text=f"進行中: {pending_tasks}").pack(anchor=tk.W)
+        
+        completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        ttk.Label(overall_frame, text=f"完成率: {completion_rate:.1f}%").pack(anchor=tk.W)
+        
+        # 分類統計
+        category_frame = ttk.LabelFrame(stats_window, text="分類統計", padding="10")
+        category_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        for category, stats in category_stats.items():
+            rate = (stats["completed"] / stats["total"] * 100) if stats["total"] > 0 else 0
+            ttk.Label(category_frame, 
+                     text=f"{category}: {stats['completed']}/{stats['total']} ({rate:.1f}%)").pack(anchor=tk.W)
+        
+        # 提醒統計
+        reminder_frame = ttk.LabelFrame(stats_window, text="即將到來的提醒", padding="10")
+        reminder_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        if upcoming_reminders:
+            for reminder in upcoming_reminders[:5]:  # 只顯示前5個
+                time_str = reminder["remind_at"].strftime("%m/%d %H:%M")
+                ttk.Label(reminder_frame, text=f"{time_str} - {reminder['task_title'][:20]}...").pack(anchor=tk.W)
+        else:
+            ttk.Label(reminder_frame, text="沒有即將到來的提醒").pack(anchor=tk.W)
+        
+        # 關閉按鈕
+        ttk.Button(stats_window, text="關閉", command=stats_window.destroy).pack(pady=10)
     
     def _reload_tasks(self):
         """重新載入任務"""
         self._load_tasks()
-        self.reminder_manager.update_reminders(self.task_manager.get_all_tasks())
+        self._clear_search()  # 清除搜尋過濾
+        self._update_status("任務已重新載入")
     
     def _on_task_double_click(self, event):
         """任務雙擊事件"""
@@ -329,21 +609,21 @@ class TodoApp:
     
     def _on_task_right_click(self, event):
         """任務右鍵點擊事件"""
-        # 選中點擊的項目
+        # 選中右鍵點擊的項目
         index = self.task_listbox.nearest(event.y)
         self.task_listbox.selection_clear(0, tk.END)
         self.task_listbox.selection_set(index)
         
-        # 顯示右鍵功能表
+        # 顯示右鍵選單
         self._show_context_menu(event)
     
     def _show_context_menu(self, event):
-        """顯示右鍵功能表"""
+        """顯示右鍵選單"""
         context_menu = tk.Menu(self.root, tearoff=0)
-        context_menu.add_command(label="標記完成/未完成", command=self._toggle_task_completion)
-        context_menu.add_command(label="設定提醒", command=self._set_reminder)
+        context_menu.add_command(label="✓ 標記完成", command=self._toggle_task_completion)
+        context_menu.add_command(label="⏰ 設定提醒", command=self._set_reminder)
         context_menu.add_separator()
-        context_menu.add_command(label="刪除任務", command=self._delete_selected_tasks)
+        context_menu.add_command(label="🗑️ 刪除任務", command=self._delete_selected_tasks)
         
         try:
             context_menu.tk_popup(event.x_root, event.y_root)
@@ -351,55 +631,74 @@ class TodoApp:
             context_menu.grab_release()
     
     def _on_reminder_triggered(self, reminder: dict):
-        """提醒觸發回調"""
-        # 使用預設的彈窗通知
+        """提醒觸發時的回調"""
         try:
             # 創建通知視窗
             notification_window = tk.Toplevel(self.root)
             notification_window.title("任務提醒")
-            notification_window.geometry("300x150")
+            notification_window.geometry("320x180")  # 增加寬度和高度
             notification_window.resizable(False, False)
             
             # 設定視窗置頂
             notification_window.attributes('-topmost', True)
             
+            # 根據主題設定背景
+            if self.dark_mode_var.get():
+                notification_window.configure(bg='#2b2b2b')
+            else:
+                notification_window.configure(bg='SystemButtonFace')
+            
+            # 主框架，增加內邊距
+            main_frame = ttk.Frame(notification_window, padding="15")
+            main_frame.pack(fill=tk.BOTH, expand=True)
+            
             # 內容標籤
-            title_label = tk.Label(
-                notification_window, 
+            title_label = ttk.Label(
+                main_frame, 
                 text="⏰ 任務提醒",
-                font=("Arial", 14, "bold")
+                font=("Microsoft JhengHei", 14, "bold")
             )
-            title_label.pack(pady=10)
+            title_label.pack(pady=(0, 10))
             
-            task_label = tk.Label(
-                notification_window,
+            task_label = ttk.Label(
+                main_frame,
                 text=f"任務: {reminder['task_title']}",
-                font=("Arial", 10),
-                wraplength=250
+                font=("Microsoft JhengHei", 12),
+                wraplength=280
             )
-            task_label.pack(pady=5)
+            task_label.pack(pady=(0, 5))
             
-            time_label = tk.Label(
-                notification_window,
+            time_label = ttk.Label(
+                main_frame,
                 text=f"提醒時間: {reminder['remind_at'].strftime('%Y-%m-%d %H:%M')}",
-                font=("Arial", 9)
+                font=("Microsoft JhengHei", 12)
             )
-            time_label.pack(pady=5)
+            time_label.pack(pady=(0, 15))
             
-            # 確認按鈕
-            confirm_button = tk.Button(
-                notification_window,
+            # 確認按鈕框架
+            button_frame = ttk.Frame(main_frame)
+            button_frame.pack(fill=tk.X)
+            
+            # 確認按鈕 - 使用較大的尺寸和醒目的樣式
+            confirm_button = ttk.Button(
+                button_frame,
                 text="確認",
                 command=notification_window.destroy,
-                width=10
+                width=15
             )
-            confirm_button.pack(pady=10)
+            confirm_button.pack(pady=5)
             
             # 居中顯示
             notification_window.update_idletasks()
             x = (notification_window.winfo_screenwidth() - notification_window.winfo_width()) // 2
             y = (notification_window.winfo_screenheight() - notification_window.winfo_height()) // 2
             notification_window.geometry(f"+{x}+{y}")
+            
+            # 設定焦點到確認按鈕
+            confirm_button.focus_set()
+            
+            # 綁定 Enter 鍵
+            notification_window.bind('<Return>', lambda e: notification_window.destroy())
             
             # 5秒後自動關閉
             notification_window.after(5000, notification_window.destroy)
@@ -449,17 +748,24 @@ class TodoApp:
 class ReminderDialog:
     """提醒設定對話框"""
     
-    def __init__(self, parent, task: Task):
+    def __init__(self, parent, task: Task, is_dark_mode: bool = False):
         """初始化對話框"""
         self.result = None
+        self.is_dark_mode = is_dark_mode
         
         # 創建對話框視窗
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(f"設定提醒 - {task.title}")
-        self.dialog.geometry("400x300")  # 增加寬度和高度以適應兩行三欄佈局
+        self.dialog.geometry("450x350")  # 進一步增加尺寸
         self.dialog.resizable(False, False)
         self.dialog.transient(parent)
         self.dialog.grab_set()
+        
+        # 根據主題設定背景
+        if self.is_dark_mode:
+            self.dialog.configure(bg='#2b2b2b')
+        else:
+            self.dialog.configure(bg='SystemButtonFace')
         
         # 居中顯示
         self.dialog.update_idletasks()
@@ -474,15 +780,15 @@ class ReminderDialog:
     
     def _create_widgets(self):
         """創建對話框部件"""
-        main_frame = ttk.Frame(self.dialog, padding="10")
+        main_frame = ttk.Frame(self.dialog, padding="15")  # 增加內邊距
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # 快速選項
-        ttk.Label(main_frame, text="快速選項:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 5))
+        ttk.Label(main_frame, text="快速選項:", font=("Microsoft JhengHei", 12, "bold")).pack(anchor=tk.W, pady=(0, 8))
         
         # 快速選項容器，使用Grid佈局實現兩行三欄
         quick_container = ttk.Frame(main_frame)
-        quick_container.pack(fill=tk.X, pady=(0, 10))
+        quick_container.pack(fill=tk.X, pady=(0, 15))
         
         # 配置網格權重，讓按鈕平均分佈
         for i in range(3):
@@ -494,40 +800,55 @@ class ReminderDialog:
             row = i // 3
             col = i % 3
             btn = ttk.Button(quick_container, text=option["label"], 
-                           command=lambda opt=option: self._select_quick_option(opt))
-            btn.grid(row=row, column=col, sticky=(tk.W, tk.E), padx=2, pady=2)
+                           command=lambda opt=option: self._select_quick_option(opt),
+                           width=12)  # 設定按鈕寬度
+            btn.grid(row=row, column=col, sticky=(tk.W, tk.E), padx=3, pady=3)
+        
+        # 分隔線
+        ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=15)
+        
+        # 自定義時間
+        ttk.Label(main_frame, text="自定義時間:", font=("Microsoft JhengHei", 12, "bold")).pack(anchor=tk.W, pady=(0, 8))
+        
+        time_frame = ttk.Frame(main_frame)
+        time_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        # 日期輸入
+        ttk.Label(time_frame, text="日期:", font=("Microsoft JhengHei", 10)).grid(row=0, column=0, sticky=tk.W, padx=(0, 8))
+        self.date_entry = ttk.Entry(time_frame, width=12, font=("Microsoft JhengHei", 10))
+        self.date_entry.grid(row=0, column=1, padx=(0, 15))
+        self.date_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
+        
+        # 時間輸入
+        ttk.Label(time_frame, text="時間:", font=("Microsoft JhengHei", 10)).grid(row=0, column=2, sticky=tk.W, padx=(0, 8))
+        self.time_entry = ttk.Entry(time_frame, width=10, font=("Microsoft JhengHei", 10))
+        self.time_entry.grid(row=0, column=3)
+        self.time_entry.insert(0, "09:00")
         
         # 分隔線
         ttk.Separator(main_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
         
-        # 自定義時間
-        ttk.Label(main_frame, text="自定義時間:", font=("Arial", 10, "bold")).pack(anchor=tk.W, pady=(0, 5))
-        
-        time_frame = ttk.Frame(main_frame)
-        time_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 日期輸入
-        ttk.Label(time_frame, text="日期:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
-        self.date_entry = ttk.Entry(time_frame, width=12)
-        self.date_entry.grid(row=0, column=1, padx=(0, 10))
-        self.date_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
-        
-        # 時間輸入
-        ttk.Label(time_frame, text="時間:").grid(row=0, column=2, sticky=tk.W, padx=(0, 5))
-        self.time_entry = ttk.Entry(time_frame, width=8)
-        self.time_entry.grid(row=0, column=3)
-        self.time_entry.insert(0, "09:00")
-        
-        # 按鈕區域 - 交換確認和取消按鈕位置
+        # 按鈕區域
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill=tk.X, pady=(10, 0))
         
         # 左側：清除提醒按鈕
-        ttk.Button(button_frame, text="清除提醒", command=self._clear_reminder).pack(side=tk.LEFT)
+        clear_button = ttk.Button(button_frame, text="清除提醒", command=self._clear_reminder, width=12)
+        clear_button.pack(side=tk.LEFT)
         
-        # 右側：取消和確認按鈕（交換順序）
-        ttk.Button(button_frame, text="取消", command=self._cancel).pack(side=tk.RIGHT, padx=(5, 0))
-        ttk.Button(button_frame, text="確認", command=self._confirm).pack(side=tk.RIGHT)
+        # 右側：取消和確認按鈕
+        cancel_button = ttk.Button(button_frame, text="取消", command=self._cancel, width=10)
+        cancel_button.pack(side=tk.RIGHT, padx=(8, 0))
+        
+        confirm_button = ttk.Button(button_frame, text="確認", command=self._confirm, width=10)
+        confirm_button.pack(side=tk.RIGHT)
+        
+        # 設定預設焦點到確認按鈕
+        confirm_button.focus_set()
+        
+        # 綁定 Enter 和 Escape 鍵
+        self.dialog.bind('<Return>', lambda e: self._confirm())
+        self.dialog.bind('<Escape>', lambda e: self._cancel())
     
     def _select_quick_option(self, option):
         """選擇快速選項"""
